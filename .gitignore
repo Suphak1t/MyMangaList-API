@@ -1,0 +1,11 @@
+# Local database settings
+/config.php
+.env
+.env.*
+
+# Runtime and editor files
+*.log
+*.bak
+*.tmp
+.idea/
+.vscode/
