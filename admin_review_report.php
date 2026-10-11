@@ -51,6 +51,11 @@ try {
         if (!$stmt->execute()) throw new RuntimeException('ยกเลิก token ไม่สำเร็จ');
     } elseif ($action === 'manga_deleted') {
         if (!$report['manga_id']) throw new InvalidArgumentException('Manga ถูกลบไปแล้ว');
+        $cover = $conn->prepare('SELECT cover_filename FROM manga WHERE manga_id = ?');
+        $cover->bind_param('i', $report['manga_id']);
+        $cover->execute();
+        $coverRow = $cover->get_result()->fetch_assoc();
+        if ($coverRow && $coverRow['cover_filename']) $files[] = $coverRow['cover_filename'];
         $stmt = $conn->prepare(
             'SELECT chapter_files.filename FROM chapter_files
              JOIN chapters ON chapters.chapter_id = chapter_files.chapter_id

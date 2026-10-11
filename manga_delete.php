@@ -35,6 +35,11 @@ $lookup = $conn->prepare(
 $lookup->bind_param('ii', $mangaId, $authenticatedUser['user_id']);
 $lookup->execute();
 foreach ($lookup->get_result() as $row) $files[] = $row['filename'];
+$cover = $conn->prepare('SELECT cover_filename FROM manga WHERE manga_id = ? AND user_id = ?');
+$cover->bind_param('ii', $mangaId, $authenticatedUser['user_id']);
+$cover->execute();
+$coverRow = $cover->get_result()->fetch_assoc();
+if ($coverRow && $coverRow['cover_filename']) $files[] = $coverRow['cover_filename'];
 
 $stmt = $conn->prepare('DELETE FROM manga WHERE manga_id = ? AND user_id = ?');
 $stmt->bind_param('ii', $mangaId, $authenticatedUser['user_id']);

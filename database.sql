@@ -29,10 +29,37 @@ CREATE TABLE IF NOT EXISTS manga (
     description TEXT DEFAULT NULL,
     genre VARCHAR(100) DEFAULT NULL,
     status ENUM('private', 'public') NOT NULL DEFAULT 'private',
+    release_status ENUM('ongoing', 'hiatus', 'completed') NOT NULL DEFAULT 'ongoing',
+    cover_filename VARCHAR(80) DEFAULT NULL,
     is_hidden TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_manga_user_created (user_id, created_at),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS manga_genres (
+    manga_id INT NOT NULL,
+    genre VARCHAR(100) NOT NULL,
+    PRIMARY KEY (manga_id, genre),
+    FOREIGN KEY (manga_id) REFERENCES manga(manga_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS manga_ratings (
+    manga_id INT NOT NULL,
+    user_id INT NOT NULL,
+    rating TINYINT NOT NULL,
+    PRIMARY KEY (manga_id, user_id),
+    FOREIGN KEY (manga_id) REFERENCES manga(manga_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS manga_views (
+    manga_id INT NOT NULL,
+    user_id INT NOT NULL,
+    viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (manga_id, user_id),
+    FOREIGN KEY (manga_id) REFERENCES manga(manga_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 

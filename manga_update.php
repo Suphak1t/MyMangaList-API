@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once __DIR__ . '/require_auth.php';
-require_once __DIR__ . '/genre_options.php';
+require_once __DIR__ . '/manga_genres.php';
 
 $data = json_decode(file_get_contents('php://input'), true);
 if (!is_array($data)) $data = [];
@@ -23,11 +23,19 @@ $mangaId = filter_var($data['manga_id'] ?? null, FILTER_VALIDATE_INT, ['options'
 $title = trim((string) ($data['title'] ?? ''));
 $author = trim((string) ($data['author'] ?? ''));
 $description = trim((string) ($data['description'] ?? ''));
-$genre = trim((string) ($data['genre'] ?? ''));
 $status = trim((string) ($data['status'] ?? ''));
+$releaseStatus = trim((string) ($data['release_status'] ?? 'ongoing'));
 $allowedStatuses = ['private', 'public'];
 
-if (!$mangaId || $title === '' || !in_array($status, $allowedStatuses, true) || !in_array($genre, MANGA_GENRES, true)) {
+try {
+    $genres = manga_parse_genres(is_array($data) ? $data : []);
+} catch (InvalidArgumentException $error) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => $error->getMessage()], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+if (!$mangaId || $title === '' || !in_array($status, $allowedStatuses, true) ||
+    !in_array($releaseStatus, ['ongoing', 'hiatus', 'completed'], true)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'ข้อมูล Manga ไม่ถูกต้อง'], JSON_UNESCAPED_UNICODE);
     exit;
@@ -44,12 +52,19 @@ if (!$owner->get_result()->fetch_assoc()) {
 
 $author = $author === '' ? null : $author;
 $description = $description === '' ? null : $description;
+$genre = $genres[0];
 $stmt = $conn->prepare(
-    'UPDATE manga SET title = ?, author = ?, description = ?, genre = ?, status = ?
+    'UPDATE manga SET title = ?, author = ?, description = ?, genre = ?, status = ?, release_status = ?
      WHERE manga_id = ? AND user_id = ?'
 );
-$stmt->bind_param('sssssii', $title, $author, $description, $genre, $status, $mangaId, $authenticatedUser['user_id']);
-if (!$stmt->execute()) {
+$stmt->bind_param('ssssssii', $title, $author, $description, $genre, $status, $releaseStatus, $mangaId, $authenticatedUser['user_id']);
+try {
+    $conn->begin_transaction();
+    $stmt->execute();
+    manga_save_genres($conn, $mangaId, $genres);
+    $conn->commit();
+} catch (Throwable $error) {
+    $conn->rollback();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'แก้ไข Manga ไม่สำเร็จ'], JSON_UNESCAPED_UNICODE);
     exit;

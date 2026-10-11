@@ -62,6 +62,10 @@ $lookup = $conn->prepare(
 $lookup->bind_param('i', $userId);
 $lookup->execute();
 foreach ($lookup->get_result() as $row) $files[] = $row['filename'];
+$covers = $conn->prepare('SELECT cover_filename FROM manga WHERE user_id = ? AND cover_filename IS NOT NULL');
+$covers->bind_param('i', $userId);
+$covers->execute();
+foreach ($covers->get_result() as $row) $files[] = $row['cover_filename'];
 
 $stmt = $conn->prepare('DELETE FROM users WHERE user_id = ?');
 $stmt->bind_param('i', $userId);

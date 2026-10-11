@@ -16,13 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once __DIR__ . '/require_auth.php';
-require_once __DIR__ . '/genre_options.php';
+require_once __DIR__ . '/manga_genres.php';
 
 $data = json_decode(file_get_contents('php://input'), true);
 $title = trim((string) ($data['title'] ?? ''));
 $author = trim((string) ($data['author'] ?? ''));
 $description = trim((string) ($data['description'] ?? ''));
-$genre = trim((string) ($data['genre'] ?? ''));
 $status = trim((string) ($data['status'] ?? 'private'));
 $allowedStatuses = ['private', 'public'];
 
@@ -32,7 +31,14 @@ if ($title === '') {
     exit;
 }
 
-if (!in_array($status, $allowedStatuses, true) || !in_array($genre, MANGA_GENRES, true)) {
+try {
+    $genres = manga_parse_genres(is_array($data) ? $data : []);
+} catch (InvalidArgumentException $error) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => $error->getMessage()], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+if (!in_array($status, $allowedStatuses, true)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'แนวเรื่องหรือสถานะไม่ถูกต้อง'], JSON_UNESCAPED_UNICODE);
     exit;
@@ -40,13 +46,21 @@ if (!in_array($status, $allowedStatuses, true) || !in_array($genre, MANGA_GENRES
 
 $author = $author === '' ? null : $author;
 $description = $description === '' ? null : $description;
+$genre = $genres[0];
 $stmt = $conn->prepare(
     'INSERT INTO manga (user_id, title, author, description, genre, status)
      VALUES (?, ?, ?, ?, ?, ?)'
 );
 $stmt->bind_param('isssss', $authenticatedUser['user_id'], $title, $author, $description, $genre, $status);
 
-if (!$stmt->execute()) {
+try {
+    $conn->begin_transaction();
+    $stmt->execute();
+    $mangaId = (int) $stmt->insert_id;
+    manga_save_genres($conn, $mangaId, $genres);
+    $conn->commit();
+} catch (Throwable $error) {
+    $conn->rollback();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'บันทึก Manga ไม่สำเร็จ'], JSON_UNESCAPED_UNICODE);
     exit;
@@ -55,5 +69,5 @@ if (!$stmt->execute()) {
 echo json_encode([
     'success' => true,
     'message' => 'เพิ่ม Manga สำเร็จ',
-    'manga_id' => $stmt->insert_id,
+    'manga_id' => $mangaId,
 ], JSON_UNESCAPED_UNICODE);
