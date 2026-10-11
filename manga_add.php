@@ -23,6 +23,7 @@ $title = trim((string) ($data['title'] ?? ''));
 $author = trim((string) ($data['author'] ?? ''));
 $description = trim((string) ($data['description'] ?? ''));
 $status = trim((string) ($data['status'] ?? 'private'));
+$releaseStatus = trim((string) ($data['release_status'] ?? 'ongoing'));
 $allowedStatuses = ['private', 'public'];
 
 if ($title === '') {
@@ -38,7 +39,8 @@ try {
     echo json_encode(['success' => false, 'message' => $error->getMessage()], JSON_UNESCAPED_UNICODE);
     exit;
 }
-if (!in_array($status, $allowedStatuses, true)) {
+if (!in_array($status, $allowedStatuses, true) ||
+    !in_array($releaseStatus, ['ongoing', 'coming_soon'], true)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'แนวเรื่องหรือสถานะไม่ถูกต้อง'], JSON_UNESCAPED_UNICODE);
     exit;
@@ -48,10 +50,10 @@ $author = $author === '' ? null : $author;
 $description = $description === '' ? null : $description;
 $genre = $genres[0];
 $stmt = $conn->prepare(
-    'INSERT INTO manga (user_id, title, author, description, genre, status)
-     VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT INTO manga (user_id, title, author, description, genre, status, release_status)
+     VALUES (?, ?, ?, ?, ?, ?, ?)'
 );
-$stmt->bind_param('isssss', $authenticatedUser['user_id'], $title, $author, $description, $genre, $status);
+$stmt->bind_param('issssss', $authenticatedUser['user_id'], $title, $author, $description, $genre, $status, $releaseStatus);
 
 try {
     $conn->begin_transaction();

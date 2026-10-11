@@ -35,7 +35,7 @@ try {
     exit;
 }
 if (!$mangaId || $title === '' || !in_array($status, $allowedStatuses, true) ||
-    !in_array($releaseStatus, ['ongoing', 'hiatus', 'completed'], true)) {
+    !in_array($releaseStatus, ['ongoing', 'hiatus', 'completed', 'coming_soon'], true)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'ข้อมูล Manga ไม่ถูกต้อง'], JSON_UNESCAPED_UNICODE);
     exit;

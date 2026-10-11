@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS manga (
     description TEXT DEFAULT NULL,
     genre VARCHAR(100) DEFAULT NULL,
     status ENUM('private', 'public') NOT NULL DEFAULT 'private',
-    release_status ENUM('ongoing', 'hiatus', 'completed') NOT NULL DEFAULT 'ongoing',
+    release_status ENUM('ongoing', 'hiatus', 'completed', 'coming_soon') NOT NULL DEFAULT 'ongoing',
     cover_filename VARCHAR(80) DEFAULT NULL,
     is_hidden TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
