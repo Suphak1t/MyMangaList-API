@@ -4,7 +4,7 @@
 2. For a new database, import `database.sql`. For an existing database, run the migrations not yet applied in order: `migrate_manga_content.sql`, `migrate_chapters.sql`, `migrate_moderation.sql`.
 3. Copy `config.example.php` to `config.php` and set the local database connection values.
 
-The Flutter app uses `http://localhost/mymangalist_api` on Windows Desktop. Its source is in the separate `D:\myflutter69\lab6` repository.
+The Flutter app uses `http://localhost/mymangalist_api` on Windows Desktop. Its source is in the separate [MyMangaList Flutter repository](https://github.com/Suphak1t/MyMangaList-Flutter).
 
 Registration creates a `user` account. To give an existing account admin access, change its role in MySQL:
 
