@@ -31,6 +31,7 @@ if ($userId <= 0) {
 }
 
 require_once __DIR__ . '/require_admin.php';
+require_once __DIR__ . '/manga_storage.php';
 
 if ($userId === (int) $authenticatedUser['user_id']) {
     http_response_code(400);
@@ -41,10 +42,32 @@ if ($userId === (int) $authenticatedUser['user_id']) {
     exit;
 }
 
+$target = $conn->prepare('SELECT role FROM users WHERE user_id = ?');
+$target->bind_param('i', $userId);
+$target->execute();
+$targetUser = $target->get_result()->fetch_assoc();
+if (!$targetUser || $targetUser['role'] === 'admin') {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'ลบผู้ใช้นี้ไม่ได้'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$files = [];
+$lookup = $conn->prepare(
+    'SELECT chapter_files.filename FROM chapter_files
+     JOIN chapters ON chapters.chapter_id = chapter_files.chapter_id
+     JOIN manga ON manga.manga_id = chapters.manga_id
+     WHERE manga.user_id = ?'
+);
+$lookup->bind_param('i', $userId);
+$lookup->execute();
+foreach ($lookup->get_result() as $row) $files[] = $row['filename'];
+
 $stmt = $conn->prepare('DELETE FROM users WHERE user_id = ?');
 $stmt->bind_param('i', $userId);
 
 if ($stmt->execute()) {
+    manga_delete_stored_files($files);
     echo json_encode([
         'success' => true,
         'message' => 'ลบผู้ใช้สำเร็จ',

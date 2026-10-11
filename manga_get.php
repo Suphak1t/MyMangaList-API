@@ -17,19 +17,31 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 require_once __DIR__ . '/require_auth.php';
 
-$stmt = $conn->prepare(
-    'SELECT manga_id, title, author, description, genre, status, created_at
-     FROM manga
-     WHERE user_id = ?
-     ORDER BY created_at DESC, manga_id DESC'
-);
-$stmt->bind_param('i', $authenticatedUser['user_id']);
+$public = ($_GET['scope'] ?? '') === 'public';
+$sql = 'SELECT manga.manga_id, manga.user_id, users.username, manga.title,
+               manga.author, manga.description, manga.genre, manga.status, manga.is_hidden,
+               manga.created_at,
+               (SELECT COUNT(*) FROM chapters
+                WHERE chapters.manga_id = manga.manga_id AND
+                      (manga.user_id = ? OR chapters.is_published = 1)) AS chapter_count
+        FROM manga JOIN users ON users.user_id = manga.user_id
+        WHERE ' . ($public ? "manga.status = 'public' AND manga.is_hidden = 0" : 'manga.user_id = ?') . '
+        ORDER BY manga.created_at DESC, manga.manga_id DESC';
+$stmt = $conn->prepare($sql);
+if ($public) {
+    $stmt->bind_param('i', $authenticatedUser['user_id']);
+} else {
+    $stmt->bind_param('ii', $authenticatedUser['user_id'], $authenticatedUser['user_id']);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 $manga = [];
 
 while ($row = $result->fetch_assoc()) {
     $row['manga_id'] = (int) $row['manga_id'];
+    $row['user_id'] = (int) $row['user_id'];
+    $row['chapter_count'] = (int) $row['chapter_count'];
+    $row['is_hidden'] = (bool) $row['is_hidden'];
     $manga[] = $row;
 }
 

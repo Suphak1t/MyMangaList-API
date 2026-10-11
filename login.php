@@ -35,13 +35,18 @@ if ($username === '' || $password === '') {
 
 require_once __DIR__ . '/config.php';
 
-$stmt = $conn->prepare('SELECT user_id, username, password, role FROM users WHERE username = ? LIMIT 1');
+$stmt = $conn->prepare('SELECT user_id, username, password, role, is_suspended FROM users WHERE username = ? LIMIT 1');
 $stmt->bind_param('s', $username);
 $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
 if ($user && password_verify($password, $user['password'])) {
+    if ((int) $user['is_suspended'] === 1) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'บัญชีนี้ถูกพักการใช้งาน'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     $accessToken = bin2hex(random_bytes(32));
     $tokenHash = hash('sha256', $accessToken);
     $expiresAt = date('Y-m-d H:i:s', time() + (30 * 24 * 60 * 60));

@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once __DIR__ . '/require_auth.php';
+require_once __DIR__ . '/manga_storage.php';
 
 $data = json_decode(file_get_contents('php://input'), true);
 $mangaId = filter_var(is_array($data) ? ($data['manga_id'] ?? null) : null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
@@ -23,6 +24,17 @@ if (!$mangaId) {
     echo json_encode(['success' => false, 'message' => 'manga_id ไม่ถูกต้อง'], JSON_UNESCAPED_UNICODE);
     exit;
 }
+
+$files = [];
+$lookup = $conn->prepare(
+    'SELECT chapter_files.filename FROM chapter_files
+     JOIN chapters ON chapters.chapter_id = chapter_files.chapter_id
+     JOIN manga ON manga.manga_id = chapters.manga_id
+     WHERE manga.manga_id = ? AND manga.user_id = ?'
+);
+$lookup->bind_param('ii', $mangaId, $authenticatedUser['user_id']);
+$lookup->execute();
+foreach ($lookup->get_result() as $row) $files[] = $row['filename'];
 
 $stmt = $conn->prepare('DELETE FROM manga WHERE manga_id = ? AND user_id = ?');
 $stmt->bind_param('ii', $mangaId, $authenticatedUser['user_id']);
@@ -36,4 +48,5 @@ if ($stmt->affected_rows === 0) {
     echo json_encode(['success' => false, 'message' => 'ไม่พบ Manga'], JSON_UNESCAPED_UNICODE);
     exit;
 }
+manga_delete_stored_files($files);
 echo json_encode(['success' => true, 'message' => 'ลบ Manga สำเร็จ'], JSON_UNESCAPED_UNICODE);

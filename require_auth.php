@@ -15,7 +15,7 @@ if (!preg_match('/^Bearer\s+([a-f0-9]{64})$/i', $authorization, $matches)) {
 
 $tokenHash = hash('sha256', $matches[1]);
 $stmt = $conn->prepare(
-    'SELECT users.user_id, users.role
+    'SELECT users.user_id, users.role, users.is_suspended
      FROM api_tokens
      JOIN users ON users.user_id = api_tokens.user_id
      WHERE api_tokens.token_hash = ? AND api_tokens.expires_at > NOW()
@@ -30,6 +30,15 @@ if (!$authenticatedUser) {
     echo json_encode([
         'success' => false,
         'message' => 'Token ไม่ถูกต้องหรือหมดอายุ',
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ((int) $authenticatedUser['is_suspended'] === 1) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'message' => 'บัญชีนี้ถูกพักการใช้งาน',
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }

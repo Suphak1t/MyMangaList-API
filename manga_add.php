@@ -16,14 +16,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once __DIR__ . '/require_auth.php';
+require_once __DIR__ . '/genre_options.php';
 
 $data = json_decode(file_get_contents('php://input'), true);
 $title = trim((string) ($data['title'] ?? ''));
 $author = trim((string) ($data['author'] ?? ''));
 $description = trim((string) ($data['description'] ?? ''));
 $genre = trim((string) ($data['genre'] ?? ''));
-$status = trim((string) ($data['status'] ?? 'Plan to Read'));
-$allowedStatuses = ['Reading', 'Completed', 'Plan to Read', 'On Hold', 'Dropped'];
+$status = trim((string) ($data['status'] ?? 'private'));
+$allowedStatuses = ['private', 'public'];
 
 if ($title === '') {
     http_response_code(400);
@@ -31,15 +32,14 @@ if ($title === '') {
     exit;
 }
 
-if (!in_array($status, $allowedStatuses, true)) {
+if (!in_array($status, $allowedStatuses, true) || !in_array($genre, MANGA_GENRES, true)) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'สถานะไม่ถูกต้อง'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['success' => false, 'message' => 'แนวเรื่องหรือสถานะไม่ถูกต้อง'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 $author = $author === '' ? null : $author;
 $description = $description === '' ? null : $description;
-$genre = $genre === '' ? null : $genre;
 $stmt = $conn->prepare(
     'INSERT INTO manga (user_id, title, author, description, genre, status)
      VALUES (?, ?, ?, ?, ?, ?)'

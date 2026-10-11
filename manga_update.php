@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once __DIR__ . '/require_auth.php';
+require_once __DIR__ . '/genre_options.php';
 
 $data = json_decode(file_get_contents('php://input'), true);
 if (!is_array($data)) $data = [];
@@ -24,9 +25,9 @@ $author = trim((string) ($data['author'] ?? ''));
 $description = trim((string) ($data['description'] ?? ''));
 $genre = trim((string) ($data['genre'] ?? ''));
 $status = trim((string) ($data['status'] ?? ''));
-$allowedStatuses = ['Reading', 'Completed', 'Plan to Read', 'On Hold', 'Dropped'];
+$allowedStatuses = ['private', 'public'];
 
-if (!$mangaId || $title === '' || !in_array($status, $allowedStatuses, true)) {
+if (!$mangaId || $title === '' || !in_array($status, $allowedStatuses, true) || !in_array($genre, MANGA_GENRES, true)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'ข้อมูล Manga ไม่ถูกต้อง'], JSON_UNESCAPED_UNICODE);
     exit;
@@ -43,7 +44,6 @@ if (!$owner->get_result()->fetch_assoc()) {
 
 $author = $author === '' ? null : $author;
 $description = $description === '' ? null : $description;
-$genre = $genre === '' ? null : $genre;
 $stmt = $conn->prepare(
     'UPDATE manga SET title = ?, author = ?, description = ?, genre = ?, status = ?
      WHERE manga_id = ? AND user_id = ?'
